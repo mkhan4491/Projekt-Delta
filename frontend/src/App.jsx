@@ -8,14 +8,44 @@ function App() {
   // Hier speichern wir unsere Rechnungen, sobald sie aus der DB kommen
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Wird ausgeführt, wenn man auf "Mahnung senden" klickt
-  const handleSendEmail = (invoice) => {
-    const emailText = generateEmailText(invoice);
-    // Zeigt den fertigen Text als Pop-up im Browser an
-    alert(`Vorschau der E-Mail für ${invoice.kunden?.firmenname}:\n\n${emailText}`);
 
-    // Hier fügen wir im nächsten Issue den echten E-Mail-Versand ein!
+  // --- NEUER BLOCK START ---
+  // Wird ausgeführt, wenn man auf "Mahnung senden" klickt
+  const handleSendEmail = async (invoice) => {
+    const emailText = generateEmailText(invoice);
+    const subject = `Wichtige Information zu Ihrer Rechnung ${invoice.rechnungsnummer}`;
+    
+    // Wir zeigen dem Nutzer, dass etwas passiert
+    alert(`Versende Mahnung an ${invoice.kunden?.firmenname}...`);
+
+    try {
+      // Hier schicken wir die Daten an den n8n Webhook
+      const response = await fetch('http://localhost:5678/webhook-test/mahnung', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          toEmail: invoice.kunden?.e_mail,
+          customerName: invoice.kunden?.firmenname,
+          subject: subject,
+          message: emailText,
+          invoiceId: invoice.id,
+          mahnstufe: invoice.mahnstufe
+        }),
+      });
+
+      if (response.ok) {
+        alert('Erfolg: Die Daten wurden an n8n übergeben!');
+      } else {
+        alert('Fehler: n8n Webhook hat nicht geantwortet. Läuft dein n8n Server?');
+      }
+    } catch (error) {
+      console.error("Webhook Fehler:", error);
+      alert('Fehler: Konnte keine Verbindung zu n8n herstellen. Bitte starte n8n!');
+    }
   };
+  // --- NEUER BLOCK ENDE ---
 
   // Diese Funktion läuft automatisch einmal los, wenn die Seite geladen wird
   useEffect(() => {
