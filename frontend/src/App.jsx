@@ -1,122 +1,85 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useState } from 'react';
+import { fetchOpenInvoices } from './utils/api';
+import { calculateOverdueDays, getMahnstufe } from './utils/invoiceLogic';
+import './App.css'; 
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Hier speichern wir unsere Rechnungen, sobald sie aus der DB kommen
+  const [invoices, setInvoices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Diese Funktion läuft automatisch einmal los, wenn die Seite geladen wird
+  useEffect(() => {
+    async function loadData() {
+      const data = await fetchOpenInvoices();
+      
+      // Wir reichern die Datenbank-Daten direkt mit unserer Logik an
+      const processedData = data.map(invoice => {
+        const overdueDays = calculateOverdueDays(invoice.faelligkeitsdatum);
+        const berechneteMahnstufe = getMahnstufe(overdueDays);
+        return { ...invoice, overdueDays, mahnstufe: berechneteMahnstufe };
+      });
+
+      // Nach Datum sortieren (die ältesten Rechnungen zuerst)
+      processedData.sort((a, b) => b.overdueDays - a.overdueDays);
+
+      setInvoices(processedData);
+      setLoading(false);
+    }
+
+    loadData();
+  }, []);
+
+  if (loading) return <h2>Lade Cortex Executive Operations...</h2>;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <h1>Cortex Executive Operations</h1>
+      <p>Automatisches Forderungsmanagement</p>
+      
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px', textAlign: 'left' }}>
+        <thead>
+          <tr style={{ backgroundColor: '#333', color: '#fff' }}>
+            <th style={{ padding: '10px' }}>Rechnungs-Nr.</th>
+            <th style={{ padding: '10px' }}>Kunde</th>
+            <th style={{ padding: '10px' }}>Betrag</th>
+            <th style={{ padding: '10px' }}>Fällig am</th>
+            <th style={{ padding: '10px' }}>Verzug</th>
+            <th style={{ padding: '10px' }}>Mahnstufe</th>
+            <th style={{ padding: '10px' }}>Aktion</th>
+          </tr>
+        </thead>
+        <tbody>
+          {invoices.map((inv) => (
+            <tr key={inv.id} style={{ borderBottom: '1px solid #ddd' }}>
+              <td style={{ padding: '10px' }}>{inv.rechnungsnummer}</td>
+              <td style={{ padding: '10px' }}>
+                <strong>{inv.kunden?.firmenname}</strong><br/>
+                <small>{inv.kunden?.ansprechpartner_name}</small>
+              </td>
+              <td style={{ padding: '10px' }}>{inv.betrag} €</td>
+              <td style={{ padding: '10px' }}>{new Date(inv.faelligkeitsdatum).toLocaleDateString('de-DE')}</td>
+              <td style={{ padding: '10px', color: inv.overdueDays > 0 ? '#d9534f' : 'inherit', fontWeight: 'bold' }}>
+                {inv.overdueDays} Tage
+              </td>
+              <td style={{ padding: '10px' }}>
+                {inv.mahnstufe === 0 ? 'Keine' : `Stufe ${inv.mahnstufe}`}
+              </td>
+              <td style={{ padding: '10px' }}>
+                {/* Dieser Button ist noch ohne Funktion, er wird in Issue 18 verkabelt */}
+                <button 
+                  disabled={inv.mahnstufe === 0}
+                  style={{ padding: '5px 10px', cursor: inv.mahnstufe === 0 ? 'not-allowed' : 'pointer' }}
                 >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+                  Mahnung senden
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
-export default App
+export default App;
