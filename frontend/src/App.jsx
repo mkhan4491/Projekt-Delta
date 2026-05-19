@@ -2,11 +2,20 @@ import { useEffect, useState } from 'react';
 import { fetchOpenInvoices } from './utils/api';
 import { calculateOverdueDays, getMahnstufe } from './utils/invoiceLogic';
 import './App.css'; 
+import { generateEmailText } from './utils/textEngine';
 
 function App() {
   // Hier speichern wir unsere Rechnungen, sobald sie aus der DB kommen
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Wird ausgeführt, wenn man auf "Mahnung senden" klickt
+  const handleSendEmail = (invoice) => {
+    const emailText = generateEmailText(invoice);
+    // Zeigt den fertigen Text als Pop-up im Browser an
+    alert(`Vorschau der E-Mail für ${invoice.kunden?.firmenname}:\n\n${emailText}`);
+
+    // Hier fügen wir im nächsten Issue den echten E-Mail-Versand ein!
+  };
 
   // Diese Funktion läuft automatisch einmal los, wenn die Seite geladen wird
   useEffect(() => {
@@ -67,19 +76,28 @@ function App() {
               </td>
               <td style={{ padding: '10px' }}>
                 {/* Dieser Button ist noch ohne Funktion, er wird in Issue 18 verkabelt */}
-                <button 
-                  disabled={inv.mahnstufe === 0}
-                  style={{ padding: '5px 10px', cursor: inv.mahnstufe === 0 ? 'not-allowed' : 'pointer' }}
-                >
-                  Mahnung senden
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+              <button 
+                disabled={inv.mahnstufe === 0}
+                onClick={() => handleSendEmail(inv)}
+                style={{ 
+                  padding: '8px 12px', 
+                  cursor: inv.mahnstufe === 0 ? 'not-allowed' : 'pointer',
+                  backgroundColor: inv.mahnstufe === 0 ? '#ccc' : '#007BFF',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontWeight: 'bold'
+                }}
+              >
+                Mahnung senden
+              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
 
 export default App;
