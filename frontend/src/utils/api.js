@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient';
 
-export async function fetchOpenInvoices() {
-  // Wir fragen die Tabelle 'rechnungen' ab und verbinden sie mit 'kunden'
+// Holt ALLE Rechnungen (offen und gemahnt)
+export async function fetchRechnungen() {
   const { data, error } = await supabase
     .from('rechnungen')
     .select(`
@@ -11,8 +11,8 @@ export async function fetchOpenInvoices() {
         ansprechpartner_name,
         e_mail
       )
-    `)
-    .eq('status', 'offen'); // Filter: Nur offene Rechnungen holen
+    `); 
+    // HIER HABEN WIR DEN FILTER .eq('status', 'offen') ENTFERNT!
 
   if (error) {
     console.error("Fehler beim Abrufen der Daten:", error.message);
