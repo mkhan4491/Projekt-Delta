@@ -48,3 +48,17 @@ export async function createRechnung(neueRechnung) {
   }
   return data;
 }
+
+// Speichert einen neuen Kunden in der Datenbank
+export async function createKunde(neuerKunde) {
+  const { data, error } = await supabase
+    .from('kunden')
+    .insert([neuerKunde])
+    .select();
+    
+  if (error) {
+    console.error("Fehler beim Erstellen des Kunden:", error);
+    return null;
+  }
+  return data;
+}

@@ -2,22 +2,26 @@ import { useEffect, useState } from 'react';
 import { calculateOverdueDays, getMahnstufe } from './utils/invoiceLogic';
 import './App.css'; 
 import { generateEmailText } from './utils/textEngine';
-import { fetchRechnungen, fetchKunden, createRechnung } from './utils/api';
+import { fetchRechnungen, fetchKunden, createRechnung, createKunde } from './utils/api'; // createKunde hinzugefügt!
 
 function App() {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  
-  // NEU: Welcher Tab ist gerade aktiv? ('offen' oder 'gemahnt')
   const [activeTab, setActiveTab] = useState('offen');
   
-  // Gedächtnis für das Formular
+  // States für das Rechnungs-Modal
+  const [showAddModal, setShowAddModal] = useState(false);
   const [kundenListe, setKundenListe] = useState([]);
   const [selectedKunde, setSelectedKunde] = useState('');
   const [rechnungsNr, setRechnungsNr] = useState('');
   const [betrag, setBetrag] = useState('');
   const [faelligAm, setFaelligAm] = useState('');
+
+  // NEU: States für das Kunden-Modal
+  const [showKundenModal, setShowKundenModal] = useState(false);
+  const [firmenname, setFirmenname] = useState('');
+  const [ansprechpartner, setAnsprechpartner] = useState('');
+  const [email, setEmail] = useState('');
 
   const handleSendEmail = async (invoice) => {
     const emailText = generateEmailText(invoice);
@@ -41,7 +45,6 @@ function App() {
 
       if (response.ok) {
         alert('Erfolg: Die Daten wurden an n8n übergeben!');
-        // Kleiner Trick: Lade die Daten nach dem Senden neu, damit die Rechnung sofort in den anderen Tab rutscht!
         loadData(); 
       } else {
         alert('Fehler: n8n Webhook hat nicht geantwortet.');
@@ -52,9 +55,8 @@ function App() {
     }
   };
 
-  // Diese Funktion lädt unsere Daten
   async function loadData() {
-    const data = await fetchRechnungen(); // Holt jetzt ALLE Rechnungen!
+    const data = await fetchRechnungen(); 
     
     const processedData = data.map(invoice => {
       const overdueDays = calculateOverdueDays(invoice.faelligkeitsdatum);
@@ -67,19 +69,13 @@ function App() {
     setLoading(false);
   }
 
-  // Lädt die Daten beim Start
-  useEffect(() => {
-    loadData();
-  }, []);
+  async function loadKunden() {
+    const data = await fetchKunden();
+    setKundenListe(data);
+  }
 
-  // Lädt die Kunden
-  useEffect(() => {
-    async function loadKunden() {
-      const data = await fetchKunden();
-      setKundenListe(data);
-    }
-    loadKunden();
-  }, []);
+  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadKunden(); }, []);
 
   const handleSaveRechnung = async () => {
     if (!selectedKunde || !rechnungsNr || !betrag || !faelligAm) {
@@ -98,20 +94,42 @@ function App() {
     };
 
     const result = await createRechnung(neueRechnung);
-
     if (result) {
       setShowAddModal(false);
       setRechnungsNr('');
       setBetrag('');
       setFaelligAm('');
       setSelectedKunde('');
-      loadData(); // Tabelle neu laden
+      loadData(); 
+    }
+  };
+
+  // NEU: Logik zum Speichern eines neuen Kunden
+  const handleSaveKunde = async () => {
+    if (!firmenname || !ansprechpartner || !email) {
+      alert("Bitte fülle alle Felder aus!");
+      return;
+    }
+
+    const neuerKunde = {
+      firmenname: firmenname,
+      ansprechpartner_name: ansprechpartner,
+      e_mail: email
+    };
+
+    const result = await createKunde(neuerKunde);
+    if (result) {
+      setShowKundenModal(false);
+      setFirmenname('');
+      setAnsprechpartner('');
+      setEmail('');
+      loadKunden(); // Lädt die Kundenliste für das Dropdown-Menü im Hintergrund neu!
+      alert("Kunde erfolgreich angelegt!");
     }
   };
 
   if (loading) return <h2>Lade Cortex Executive Operations...</h2>;
 
-  // NEU: Wir filtern die Rechnungen, bevor wir sie anzeigen, je nachdem welcher Tab aktiv ist!
   const displayedInvoices = invoices.filter(inv => inv.status === activeTab);
 
   return (
@@ -119,58 +137,61 @@ function App() {
       <h1>Cortex Executive Operations</h1>
       <p>Automatisches Forderungsmanagement</p>
       
-      <button 
-        onClick={() => setShowAddModal(true)}
-        style={{ padding: '10px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', marginBottom: '25px' }}
-      >
-        + Neue Rechnung erfassen
-      </button>
-
-      {/* --- NEU: DIE TAB-NAVIGATION --- */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #444', paddingBottom: '10px' }}>
+      {/* Die Aktions-Buttons oben nebeneinander */}
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '25px' }}>
         <button 
-          onClick={() => setActiveTab('offen')}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: activeTab === 'offen' ? '#007BFF' : '#333',
-            color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'
-          }}
+          onClick={() => setShowAddModal(true)}
+          style={{ padding: '10px 15px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
         >
-          Aktionsbedarf (Offen)
+          + Neue Rechnung erfassen
         </button>
         <button 
-          onClick={() => setActiveTab('gemahnt')}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: activeTab === 'gemahnt' ? '#f0ad4e' : '#333',
-            color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'
-          }}
+          onClick={() => setShowKundenModal(true)}
+          style={{ padding: '10px 15px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}
         >
-          Warteschleife (Gemahnt)
+          + Neuer Kunde
         </button>
       </div>
-      {/* ------------------------------- */}
 
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid #444', paddingBottom: '10px' }}>
+        <button onClick={() => setActiveTab('offen')} style={{ padding: '10px 20px', backgroundColor: activeTab === 'offen' ? '#007BFF' : '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Aktionsbedarf (Offen)</button>
+        <button onClick={() => setActiveTab('gemahnt')} style={{ padding: '10px 20px', backgroundColor: activeTab === 'gemahnt' ? '#f0ad4e' : '#333', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Warteschleife (Gemahnt)</button>
+      </div>
+
+      {/* Das Modal für neue Rechnungen */}
       {showAddModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: '#222', padding: '30px', borderRadius: '10px', width: '400px', color: '#fff', display: 'flex', flexDirection: 'column', gap: '15px', border: '1px solid #444' }}>
             <h2 style={{ margin: '0 0 10px 0' }}>Neue Rechnung erfassen</h2>
-            
             <select value={selectedKunde} onChange={(e) => setSelectedKunde(e.target.value)} style={{ padding: '10px', borderRadius: '5px', border: 'none', backgroundColor: '#fff', color: '#000' }}>
               <option value="">-- Kunden auswählen --</option>
               {kundenListe.map(kunde => (
                 <option key={kunde.id} value={kunde.id}>{kunde.firmenname}</option>
               ))}
             </select>
-            
             <input type="text" placeholder="Rechnungs-Nr. (z.B. RE-2026-004)" value={rechnungsNr} onChange={(e) => setRechnungsNr(e.target.value)} style={{ padding: '10px', borderRadius: '5px', border: 'none', color: '#000', backgroundColor: '#fff' }} />
             <input type="number" placeholder="Betrag in €" value={betrag} onChange={(e) => setBetrag(e.target.value)} style={{ padding: '10px', borderRadius: '5px', border: 'none', color: '#000', backgroundColor: '#fff' }} />
             <label style={{ fontSize: '14px', color: '#aaa', marginBottom: '-10px' }}>Fällig am:</label>
             <input type="date" value={faelligAm} onChange={(e) => setFaelligAm(e.target.value)} style={{ padding: '10px', borderRadius: '5px', border: 'none', color: '#000', backgroundColor: '#fff' }} />
-            
             <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
               <button onClick={handleSaveRechnung} style={{ flex: 1, padding: '10px', backgroundColor: '#007BFF', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Speichern</button>
               <button onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Abbrechen</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEU: Das Modal für neue Kunden */}
+      {showKundenModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#222', padding: '30px', borderRadius: '10px', width: '400px', color: '#fff', display: 'flex', flexDirection: 'column', gap: '15px', border: '1px solid #444' }}>
+            <h2 style={{ margin: '0 0 10px 0' }}>Neuen Kunden anlegen</h2>
+            <input type="text" placeholder="Firmenname" value={firmenname} onChange={(e) => setFirmenname(e.target.value)} style={{ padding: '10px', borderRadius: '5px', border: 'none', color: '#000', backgroundColor: '#fff' }} />
+            <input type="text" placeholder="Ansprechpartner" value={ansprechpartner} onChange={(e) => setAnsprechpartner(e.target.value)} style={{ padding: '10px', borderRadius: '5px', border: 'none', color: '#000', backgroundColor: '#fff' }} />
+            <input type="email" placeholder="E-Mail Adresse" value={email} onChange={(e) => setEmail(e.target.value)} style={{ padding: '10px', borderRadius: '5px', border: 'none', color: '#000', backgroundColor: '#fff' }} />
+            <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+              <button onClick={handleSaveKunde} style={{ flex: 1, padding: '10px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Kunde speichern</button>
+              <button onClick={() => setShowKundenModal(false)} style={{ flex: 1, padding: '10px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold' }}>Abbrechen</button>
             </div>
           </div>
         </div>
@@ -189,7 +210,6 @@ function App() {
           </tr>
         </thead>
         <tbody>
-          {/* NEU: Wir mappen jetzt über 'displayedInvoices' statt über alle 'invoices' */}
           {displayedInvoices.length === 0 ? (
             <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#888' }}>Keine Rechnungen in dieser Ansicht.</td></tr>
           ) : (
@@ -202,13 +222,11 @@ function App() {
                 <td style={{ padding: '10px', color: inv.overdueDays > 0 ? '#d9534f' : 'inherit', fontWeight: 'bold' }}>{inv.overdueDays} Tage</td>
                 <td style={{ padding: '10px' }}>{inv.mahnstufe === 0 ? 'Keine' : `Stufe ${inv.mahnstufe}`}</td>
                 <td style={{ padding: '10px' }}>
-                  {/* Der Button ist nur aktiv, wenn wir im Tab "offen" sind */}
                   <button 
                     disabled={inv.mahnstufe === 0 || activeTab === 'gemahnt'}
                     onClick={() => handleSendEmail(inv)}
                     style={{ 
-                      padding: '8px 12px', 
-                      cursor: (inv.mahnstufe === 0 || activeTab === 'gemahnt') ? 'not-allowed' : 'pointer',
+                      padding: '8px 12px', cursor: (inv.mahnstufe === 0 || activeTab === 'gemahnt') ? 'not-allowed' : 'pointer',
                       backgroundColor: (inv.mahnstufe === 0 || activeTab === 'gemahnt') ? '#ccc' : '#007BFF',
                       color: '#fff', border: 'none', borderRadius: '4px', fontWeight: 'bold'
                     }}
