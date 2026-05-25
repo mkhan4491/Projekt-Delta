@@ -26,7 +26,7 @@ function App() {
     alert(`Versende Mahnung an ${invoice.kunden?.firmenname}...`);
 
     try {
-      const response = await fetch('http://localhost:5678/webhook-test/mahnung', {
+      const response = await fetch('http://localhost:5678/webhook/mahnung', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

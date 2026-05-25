@@ -1,0 +1,122 @@
+{
+  "name": "Mahnnungs-workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "mahnung",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "63cea7ea-fe4b-445a-80ed-be739a998509",
+      "name": "Webhook",
+      "webhookId": "0e6ae15d-74e1-4ce3-9f95-fa755e55cbe6"
+    },
+    {
+      "parameters": {
+        "sendTo": "khanmashalk1ng@gmail.com",
+        "subject": "={{ $json.body.subject }}",
+        "message": "={{ $json.body.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "29f13462-954e-4b72-9381-24733694eb61",
+      "name": "Send a message",
+      "webhookId": "0f8a43ab-d689-4125-b4d4-7108659c86c7",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "8dapjc8O18R43JIS",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "rechnungen",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body.invoiceId }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "gemahnt"
+            },
+            {
+              "fieldId": "letzte_mahnung_am",
+              "fieldValue": "={{ $today.toFormat('yyyy-MM-dd') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        400,
+        16
+      ],
+      "id": "b036262f-140c-4a59-b66c-1263a80c6f70",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "ITAtKQhF8v4SVVFy",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a346547c-3cef-4308-a591-9e7296b80a9f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "022bb40d6575e3606e87c3769f99341bfd4ecf2b542ec4001fb8d5c454e1366c"
+  },
+  "id": "h8TnApNeNibfW1wn",
+  "tags": []
+}
