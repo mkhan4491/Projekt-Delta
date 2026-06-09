@@ -55,10 +55,62 @@ export async function createKunde(neuerKunde) {
     .from('kunden')
     .insert([neuerKunde])
     .select();
-    
+
   if (error) {
     console.error("Fehler beim Erstellen des Kunden:", error);
     return null;
   }
   return data;
+}
+
+// Rechnung als bezahlt markieren
+export async function markAsBezahlt(id, { bezahlt_am, bezahlter_betrag }) {
+  const { error } = await supabase
+    .from('rechnungen')
+    .update({ status: 'bezahlt', bezahlt_am, bezahlter_betrag })
+    .eq('id', id);
+
+  if (error) {
+    console.error("Fehler beim Bezahlt-Markieren:", error);
+    return false;
+  }
+  return true;
+}
+
+// Mahnhistorie einer Rechnung laden
+export async function fetchMahnhistorie(rechnungId) {
+  const { data, error } = await supabase
+    .from('mahnhistorie')
+    .select('*')
+    .eq('rechnung_id', rechnungId)
+    .order('gesendet_am', { ascending: false });
+
+  if (error) {
+    console.error("Fehler beim Laden der Mahnhistorie:", error);
+    return [];
+  }
+  return data;
+}
+
+// Mahneintrag nach erfolgreichem Versand speichern
+export async function createMahneintrag({ rechnung_id, mahnstufe, email_empfaenger, betreff }) {
+  const { error } = await supabase
+    .from('mahnhistorie')
+    .insert([{ rechnung_id, mahnstufe, email_empfaenger, betreff }]);
+
+  if (error) console.error("Fehler beim Speichern der Mahnhistorie:", error);
+}
+
+// Löscht eine Rechnung anhand ihrer ID
+export async function deleteRechnung(id) {
+  const { error } = await supabase
+    .from('rechnungen')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Fehler beim Löschen der Rechnung:", error);
+    return false;
+  }
+  return true;
 }
