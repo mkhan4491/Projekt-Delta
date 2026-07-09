@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DataContext } from './useData.js';
-import { fetchRechnungen, fetchKunden } from '../utils/api';
+import { fetchRechnungen, fetchKunden, fetchEinstellungen } from '../utils/api';
 import { calculateOverdueDays, getMahnstufe } from '../utils/invoiceLogic';
 
 function useToastState() {
@@ -21,20 +21,25 @@ function useToastState() {
   return { toasts, addToast, removeToast };
 }
 
+function processRechnungen(data) {
+  const processed = data.map(inv => {
+    const overdueDays = calculateOverdueDays(inv.faelligkeitsdatum);
+    return { ...inv, overdueDays, mahnstufe: getMahnstufe(overdueDays) };
+  });
+  processed.sort((a, b) => b.overdueDays - a.overdueDays);
+  return processed;
+}
+
 export default function DataProvider({ children }) {
   const [invoices, setInvoices] = useState([]);
   const [kundenListe, setKundenListe] = useState([]);
+  const [einstellungen, setEinstellungen] = useState(null);
   const [loading, setLoading] = useState(true);
   const { toasts, addToast, removeToast } = useToastState();
 
   async function loadData() {
     const data = await fetchRechnungen();
-    const processed = data.map(inv => {
-      const overdueDays = calculateOverdueDays(inv.faelligkeitsdatum);
-      return { ...inv, overdueDays, mahnstufe: getMahnstufe(overdueDays) };
-    });
-    processed.sort((a, b) => b.overdueDays - a.overdueDays);
-    setInvoices(processed);
+    setInvoices(processRechnungen(data));
     setLoading(false);
   }
 
@@ -43,17 +48,18 @@ export default function DataProvider({ children }) {
     setKundenListe(data);
   }
 
+  async function loadEinstellungen() {
+    const data = await fetchEinstellungen();
+    setEinstellungen(data);
+  }
+
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchRechnungen(), fetchKunden()]).then(([rechnungen, kunden]) => {
+    Promise.all([fetchRechnungen(), fetchKunden(), fetchEinstellungen()]).then(([rechnungen, kunden, settings]) => {
       if (cancelled) return;
-      const processed = rechnungen.map(inv => {
-        const overdueDays = calculateOverdueDays(inv.faelligkeitsdatum);
-        return { ...inv, overdueDays, mahnstufe: getMahnstufe(overdueDays) };
-      });
-      processed.sort((a, b) => b.overdueDays - a.overdueDays);
-      setInvoices(processed);
+      setInvoices(processRechnungen(rechnungen));
       setKundenListe(kunden);
+      setEinstellungen(settings);
       setLoading(false);
     });
     return () => { cancelled = true; };
@@ -61,8 +67,8 @@ export default function DataProvider({ children }) {
 
   return (
     <DataContext.Provider value={{
-      invoices, kundenListe, loading,
-      loadData, loadKunden,
+      invoices, kundenListe, einstellungen, loading,
+      loadData, loadKunden, loadEinstellungen,
       toasts, addToast, removeToast,
     }}>
       {children}

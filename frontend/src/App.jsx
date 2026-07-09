@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import RechnungenPage from './pages/RechnungenPage.jsx';
 import KundenPage from './pages/KundenPage.jsx';
 import KundeDetailPage from './pages/KundeDetailPage.jsx';
+import EinstellungenPage from './pages/EinstellungenPage.jsx';
 import './App.css';
 
 function AppLayout() {
@@ -59,6 +60,7 @@ function AuthGate() {
           <Route path="/rechnungen" element={<RechnungenPage />} />
           <Route path="/kunden" element={<KundenPage />} />
           <Route path="/kunden/:id" element={<KundeDetailPage />} />
+          <Route path="/einstellungen" element={<EinstellungenPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

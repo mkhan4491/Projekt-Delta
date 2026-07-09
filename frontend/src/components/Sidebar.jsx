@@ -17,6 +17,7 @@ export default function Sidebar() {
         <NavLink to="/" end className={linkClass}>Dashboard</NavLink>
         <NavLink to="/rechnungen" className={linkClass}>Rechnungen</NavLink>
         <NavLink to="/kunden" className={linkClass}>Kunden</NavLink>
+        <NavLink to="/einstellungen" className={linkClass}>Einstellungen</NavLink>
       </nav>
       <div className="sidebar__footer">
         <div className="sidebar__user" title={session?.user?.email}>

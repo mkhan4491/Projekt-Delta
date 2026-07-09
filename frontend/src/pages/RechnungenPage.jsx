@@ -1,15 +1,16 @@
 import { useMemo, useState } from 'react';
 import { useData } from '../context/useData.js';
 import { createRechnung, deleteRechnung, markAsBezahlt, updateRechnung } from '../utils/api';
-import { sendMahnung } from '../utils/mahnung';
+import { sendMahnung, buildMahnung } from '../utils/mahnung';
 import InvoiceTable from '../components/InvoiceTable.jsx';
 import InvoiceDetailPanel from '../components/InvoiceDetailPanel.jsx';
 import AddRechnungModal from '../components/AddRechnungModal.jsx';
 import EditRechnungModal from '../components/EditRechnungModal.jsx';
 import BezahltModal from '../components/BezahltModal.jsx';
+import MahnungVorschauModal from '../components/MahnungVorschauModal.jsx';
 
 export default function RechnungenPage() {
-  const { invoices, kundenListe, loadData, addToast } = useData();
+  const { invoices, kundenListe, einstellungen, loadData, addToast } = useData();
 
   const [activeTab, setActiveTab] = useState('offen');
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,6 +22,7 @@ export default function RechnungenPage() {
   const [editInvoice, setEditInvoice] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [bezahltInvoice, setBezahltInvoice] = useState(null);
+  const [vorschauInvoice, setVorschauInvoice] = useState(null);
   const [bulkProgress, setBulkProgress] = useState(null); // { current, total } | null
 
   // Tab-Wechsel leert die Selektion, damit keine unsichtbaren Rechnungen gemahnt werden
@@ -81,10 +83,15 @@ export default function RechnungenPage() {
     });
   };
 
-  const handleSendEmail = async (invoice) => {
-    addToast('info', `Versende Mahnung an ${invoice.kunden?.firmenname}...`);
-    const result = await sendMahnung(invoice);
+  // "Mahnung senden" öffnet zuerst die Vorschau — versendet wird erst nach Bestätigung
+  const handleSendEmail = (invoice) => {
+    setVorschauInvoice(invoice);
+  };
+
+  const handleConfirmSend = async (invoice, mail) => {
+    const result = await sendMahnung(invoice, mail);
     if (result.ok) {
+      setVorschauInvoice(null);
       addToast('success', 'Mahnung erfolgreich gesendet.');
       setHistorieRefreshKey(k => k + 1);
       loadData();
@@ -107,7 +114,7 @@ export default function RechnungenPage() {
     const succeededIds = [];
     for (let i = 0; i < targets.length; i++) {
       setBulkProgress({ current: i + 1, total: targets.length });
-      const result = await sendMahnung(targets[i]);
+      const result = await sendMahnung(targets[i], buildMahnung(targets[i], einstellungen));
       if (result.ok) succeededIds.push(targets[i].id);
       else failed.push(targets[i].rechnungsnummer);
     }
@@ -314,6 +321,16 @@ export default function RechnungenPage() {
           invoice={bezahltInvoice}
           onSave={handleSaveBezahlt}
           onClose={() => setBezahltInvoice(null)}
+          addToast={addToast}
+        />
+      )}
+
+      {vorschauInvoice && (
+        <MahnungVorschauModal
+          invoice={vorschauInvoice}
+          einstellungen={einstellungen}
+          onSend={handleConfirmSend}
+          onClose={() => setVorschauInvoice(null)}
           addToast={addToast}
         />
       )}

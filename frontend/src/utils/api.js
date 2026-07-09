@@ -115,6 +115,34 @@ export async function createMahneintrag({ rechnung_id, mahnstufe, email_empfaeng
   if (error) console.error("Fehler beim Speichern der Mahnhistorie:", error);
 }
 
+// Lädt die Firmen-Einstellungen (Singleton-Zeile mit id=1)
+export async function fetchEinstellungen() {
+  const { data, error } = await supabase
+    .from('einstellungen')
+    .select('*')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Fehler beim Laden der Einstellungen:", error);
+    return null;
+  }
+  return data;
+}
+
+// Speichert die Firmen-Einstellungen (legt die Zeile bei Bedarf an)
+export async function updateEinstellungen(fields) {
+  const { error } = await supabase
+    .from('einstellungen')
+    .upsert({ id: 1, ...fields });
+
+  if (error) {
+    console.error("Fehler beim Speichern der Einstellungen:", error);
+    return false;
+  }
+  return true;
+}
+
 // Löscht eine Rechnung anhand ihrer ID
 export async function deleteRechnung(id) {
   const { error } = await supabase

@@ -432,6 +432,66 @@
   padding: 20px 0;
 }
 
+/* ── Einstellungen ────────────────────────────────────────────── */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.settings-templates {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.settings-hint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: -6px 0 4px;
+  line-height: 2;
+}
+.settings-hint code {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-right: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.form-textarea {
+  width: 100%;
+  padding: 10px;
+  font-size: 13px;
+  font-family: var(--sans);
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  box-sizing: border-box;
+  resize: vertical;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+.modal--wide {
+  width: 640px;
+}
+
 /* ── Loading ──────────────────────────────────────────────────── */
 .loading-screen {
   display: flex;
