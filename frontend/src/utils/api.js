@@ -22,12 +22,12 @@ export async function fetchRechnungen() {
   return data;
 }
 
-// Holt alle Kunden für das Dropdown-Menü
+// Holt alle Kunden mit allen Feldern
 export async function fetchKunden() {
   const { data, error } = await supabase
     .from('kunden')
-    .select('id, firmenname');
-    
+    .select('*');
+
   if (error) {
     console.error("Fehler beim Laden der Kunden:", error);
     return [];
@@ -61,6 +61,20 @@ export async function createKunde(neuerKunde) {
     return null;
   }
   return data;
+}
+
+// Aktualisiert Felder einer bestehenden Rechnung
+export async function updateRechnung(id, fields) {
+  const { error } = await supabase
+    .from('rechnungen')
+    .update(fields)
+    .eq('id', id);
+
+  if (error) {
+    console.error("Fehler beim Aktualisieren der Rechnung:", error);
+    return false;
+  }
+  return true;
 }
 
 // Rechnung als bezahlt markieren

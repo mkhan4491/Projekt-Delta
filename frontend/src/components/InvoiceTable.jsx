@@ -1,51 +1,88 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
+import MahnstufeBadge from './MahnstufeBadge.jsx';
 
 const currencyFormatter = new Intl.NumberFormat('de-DE', {
   style: 'currency',
   currency: 'EUR',
 });
 
-function MahnstufeBadge({ stufe }) {
-  if (stufe === 0) return <span className="badge badge--none">Keine</span>;
-  if (stufe === 1) return <span className="badge badge--stufe1">Stufe 1</span>;
-  if (stufe === 2) return <span className="badge badge--stufe2">Stufe 2</span>;
-  return <span className="badge badge--stufe3">Stufe 3</span>;
+function SortableTh({ label, sortKey, activeKey, dir, onSort }) {
+  const isActive = activeKey === sortKey;
+  const cls = `th-sortable${isActive ? ` th-sortable--${dir}` : ''}`;
+  return (
+    <th className={cls} onClick={() => onSort(sortKey)}>{label}</th>
+  );
 }
 
-export default function InvoiceTable({ invoices, activeTab, onSendEmail, onDelete, onMarkBezahlt, onShowHistorie }) {
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+export default function InvoiceTable({
+  invoices, activeTab, onRowClick,
+  sortKey, sortDir, onSort,
+  selectable = false, selectedIds, onToggleSelect, onToggleSelectAll,
+}) {
+  const isBezahltTab = activeTab === 'bezahlt';
+  const headerCheckboxRef = useRef(null);
+
+  const allSelected = selectable && invoices.length > 0 && invoices.every(inv => selectedIds.has(inv.id));
+  const someSelected = selectable && invoices.some(inv => selectedIds.has(inv.id));
 
   useEffect(() => {
-    setConfirmDeleteId(null);
-  }, [activeTab]);
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = someSelected && !allSelected;
+    }
+  }, [someSelected, allSelected]);
 
-  const isBezahltTab = activeTab === 'bezahlt';
-  const canSend = (inv) => inv.mahnstufe !== 0 && activeTab === 'offen';
+  const colCount = (selectable ? 1 : 0) + 6;
 
   return (
     <div className="invoice-table-wrapper">
       <table className="invoice-table">
         <thead>
           <tr>
+            {selectable && (
+              <th className="checkbox-cell">
+                <input
+                  ref={headerCheckboxRef}
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={onToggleSelectAll}
+                />
+              </th>
+            )}
             <th>Rechnungs-Nr.</th>
             <th>Kunde</th>
-            <th>Betrag</th>
-            <th>Fällig am</th>
-            <th>{isBezahltTab ? 'Bezahlt am' : 'Verzug'}</th>
+            <SortableTh label="Betrag" sortKey="betrag" activeKey={sortKey} dir={sortDir} onSort={onSort} />
+            <SortableTh label="Fällig am" sortKey="faelligkeitsdatum" activeKey={sortKey} dir={sortDir} onSort={onSort} />
+            {isBezahltTab ? (
+              <th>Bezahlt am</th>
+            ) : (
+              <SortableTh label="Verzug" sortKey="overdueDays" activeKey={sortKey} dir={sortDir} onSort={onSort} />
+            )}
             <th>{isBezahltTab ? 'Status' : 'Mahnstufe'}</th>
-            <th>Aktionen</th>
           </tr>
         </thead>
         <tbody>
           {invoices.length === 0 ? (
             <tr>
-              <td colSpan="7" className="invoice-table__empty">
+              <td colSpan={colCount} className="invoice-table__empty">
                 Keine Rechnungen in dieser Ansicht.
               </td>
             </tr>
           ) : (
             invoices.map((inv) => (
-              <tr key={inv.id}>
+              <tr
+                key={inv.id}
+                className={`row-clickable${selectable && selectedIds.has(inv.id) ? ' row-selected' : ''}`}
+                onClick={() => onRowClick(inv)}
+              >
+                {selectable && (
+                  <td className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(inv.id)}
+                      onChange={() => onToggleSelect(inv.id)}
+                    />
+                  </td>
+                )}
                 <td>{inv.rechnungsnummer}</td>
                 <td>
                   <div className="cell-customer__name">{inv.kunden?.firmenname}</div>
@@ -69,60 +106,6 @@ export default function InvoiceTable({ invoices, activeTab, onSendEmail, onDelet
                     <span className="badge badge--success">Bezahlt</span>
                   ) : (
                     <MahnstufeBadge stufe={inv.mahnstufe} />
-                  )}
-                </td>
-                <td>
-                  {confirmDeleteId === inv.id ? (
-                    <div className="cell-confirm">
-                      <span>Wirklich löschen?</span>
-                      <button
-                        className="btn btn--danger btn--sm"
-                        onClick={() => {
-                          onDelete(inv.id);
-                          setConfirmDeleteId(null);
-                        }}
-                      >
-                        Ja, löschen
-                      </button>
-                      <button
-                        className="btn btn--secondary btn--sm"
-                        onClick={() => setConfirmDeleteId(null)}
-                      >
-                        Abbrechen
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="cell-actions">
-                      {!isBezahltTab && (
-                        <>
-                          <button
-                            className="btn btn--primary btn--sm"
-                            disabled={!canSend(inv)}
-                            onClick={() => onSendEmail(inv)}
-                          >
-                            Mahnung senden
-                          </button>
-                          <button
-                            className="btn btn--success btn--sm"
-                            onClick={() => onMarkBezahlt(inv)}
-                          >
-                            ✓ Bezahlt
-                          </button>
-                        </>
-                      )}
-                      <button
-                        className="btn btn--ghost btn--sm"
-                        onClick={() => onShowHistorie(inv)}
-                      >
-                        Historie
-                      </button>
-                      <button
-                        className="btn btn--ghost btn--sm"
-                        onClick={() => setConfirmDeleteId(inv.id)}
-                      >
-                        Löschen
-                      </button>
-                    </div>
                   )}
                 </td>
               </tr>
