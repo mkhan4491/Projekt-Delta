@@ -1,5 +1,5 @@
 import { generateEmailText } from './textEngine';
-import { createMahneintrag } from './api';
+import { createMahneintrag, updateRechnung } from './api';
 
 const WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL ?? 'http://localhost:5678/webhook/mahnung';
 
@@ -31,6 +31,13 @@ export async function sendMahnung(invoice) {
       email_empfaenger: invoice.kunden?.e_mail,
       betreff:          subject,
     });
+
+    // Status direkt hier setzen, statt sich auf den n8n-Update-Node zu verlassen
+    await updateRechnung(invoice.id, {
+      status: 'gemahnt',
+      letzte_mahnung_am: new Date().toISOString().split('T')[0],
+    });
+
     return { ok: true };
   } catch {
     return { ok: false, reason: 'network' };

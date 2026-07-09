@@ -27,7 +27,7 @@ export function computeKpiStats(invoices) {
     totalOpen:    invoices.filter(inv => inv.status === 'offen').reduce((s, i) => s + i.betrag, 0),
     countOpen:    invoices.filter(inv => inv.status === 'offen').length,
     countGemahnt: invoices.filter(inv => inv.status === 'gemahnt').length,
-    countUrgent:  invoices.filter(inv => inv.mahnstufe === 3).length,
+    countUrgent:  invoices.filter(inv => inv.status !== 'bezahlt' && inv.mahnstufe === 3).length,
     totalBezahlt: invoices.filter(inv => inv.status === 'bezahlt').reduce((s, i) => s + (i.bezahlter_betrag ?? i.betrag), 0),
     countBezahlt: invoices.filter(inv => inv.status === 'bezahlt').length,
   };
